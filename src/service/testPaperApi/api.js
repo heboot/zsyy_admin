@@ -5,3 +5,5 @@ export const uploadTest = data => postConfig('admin/test/question/uploadTest', d
 export const testList = data => postConfig('admin/test/question/pageQuery', data);
 // 查询报表列表
 export const statement = data => postConfig('admin/test/question/getStatement', data);
+// 查询报表列表
+export const statementExcel = data => fetch('admin/test/question/statement/export', data);

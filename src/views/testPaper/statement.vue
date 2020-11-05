@@ -4,25 +4,25 @@
       <p slot="title">报表</p>
       <div class="sear">
         <Form :model="formItem" :label-width="100" inline>
-          <FormItem label="用户名字" class="searchInput">
+          <!-- <FormItem label="用户名字" class="searchInput">
             <Input v-model="formItem.bankTitle" placeholder="请输入用户名字"></Input>
-          </FormItem>
-          <FormItem label="参考状态：" class="searchInput">
-            <Select style="width:200px;" v-model="formItem.userCategory">
-                <Option :value="0">未参考</Option>
-                <Option :value="1">参考</Option>
+          </FormItem> -->
+          <FormItem label="选择导出试卷" class="searchInput">
+            <Select style="width:400px;" v-model="formItem.testId">
+                <Option :value="item.id" v-for="(item,index) in testTitleList" :key="index"  >{{item.testTitle}}</Option>
             </Select>
           </FormItem>
         </Form>
         <div class="btn">
           <Button type="primary" @click="search">
-            <Icon type="ios-search" style="font-size:16px" />查询
+            <Icon type="ios-search" style="font-size:16px" />导出
           </Button>
-          <Button type="default" style="margin-left:10px" @click="clear">
+          <!-- <Button type="default" style="margin-left:10px" @click="clear">
             <Icon type="ios-undo" style="font-size:16px" />重置
-          </Button>
+          </Button> -->
         </div>
       </div>
+        
       <div class="tableHead">
         <div style="font-weight:700;">数据列表</div>
       </div>
@@ -39,10 +39,11 @@
 
 <script>
 import {getUserClass} from "@/service/questionApi/api";
-import {testList,statement} from "@/service/testPaperApi/api";
+import {testList,statement,statementExcel} from "@/service/testPaperApi/api";
 export default {
   data() {
     return {
+      testTitleList:[],
       userType: [],
       maxPics: "",
       picModal: false,
@@ -57,14 +58,23 @@ export default {
       limit: 10,
       error: false,
       formItem: {
-        bankTitle: ""
+        bankTitle: "",
+        testId:""
       },
       typeList: [],
       tableData: [],
       tableColumns: [
         {
           title: "姓名",
-          key: "userName"
+          key: "realName"
+        },
+         {
+          title: "手机",
+          key: "phone"
+        },
+         {
+          title: "试卷",
+          key: "testName"
         },
         {
           title: "得分",
@@ -114,8 +124,18 @@ export default {
   created() {
     this.getUserList();
     this.getTableData();
+    this.getTestList();
   },
   methods: {
+    getTestList(){
+       testList({
+        pageNum:1,
+        pageSize: 100,
+      }).then(res => {
+        console.log(res);
+        this.testTitleList = res.data.content;
+      });
+    },
     goOther(){
         this.$router.push({path:"/statement",query:{id:1}})
     },
@@ -175,14 +195,32 @@ export default {
       this.getTableData();
     },
     search() {
-      this.page = 1;
-      this.getTableData();
+      if(this.formItem.testId == null || this.formItem.testId == ""){
+         this.$Message.error("请先选择导出的试卷名");
+        return
+      }
+      // this.page = 1;
+      // this.getTableData();
+      const elink = document.createElement('a')
+      elink.href = "http://47.115.32.248:6004/admin/test/question/statement/export?testId="  +   this.formItem.testId
+              document.body.appendChild(elink)
+              elink.click()
+              URL.revokeObjectURL(elink.href) // 释放URL 对象
+              document.body.removeChild(elink)
     },
     clear() {
       for (let key in this.formItem) {
         this.formItem[key] = "";
       }
       this.getTableData();
+// const elink = document.createElement('a')
+//       elink.href = "http://127.0.0.1:6004/admin/test/question/statement/export?a="  +   
+//               document.body.appendChild(elink)
+//               elink.click()
+//               URL.revokeObjectURL(elink.href) // 释放URL 对象
+//               document.body.removeChild(elink)
+
+ 
     },
     getTableData() {
       statement({
@@ -209,7 +247,7 @@ export default {
 .sear {
   display: flex;
   .searchInput {
-    width: 300px;
+    // width: 300px;
   }
   .btn {
     margin-left: 100px;

@@ -107,6 +107,7 @@ import {
   updateSubject
 } from "@/service/questionApi/api";
 import { getStore, removeStore, setStore } from "@/config/storage";
+import excel from "../../util/excel.js";
 export default {
   data() {
     return {
@@ -293,8 +294,55 @@ export default {
     this.getTopic();
   },
   methods: {
-    onBeforeImgUploading() {
+    
+     // 读取文件
+    readFile(file) {
+      const reader = new FileReader()
+      reader.readAsArrayBuffer(file)
+      reader.onloadstart = e => {
+        this.uploadLoading = true
+        this.tableLoading = true
+        this.showProgress = true
+      }
+      reader.onprogress = e => {
+        this.progressPercent = Math.round(e.loaded / e.total * 100)
+      }
+      reader.onerror = e => {
+        this.$Message.error('文件读取出错')
+      }
+      reader.onload = e => {
+        const data = e.target.result
+        const { header, results } = excel.read(data, 'array')
+        const tableTitle = header.map(item => { return { title: item, key: item } })
+        this.tableData = results  //这里的tableData就是拿到的excel表格中的数据
+        // console.log(this.tableTitle)
+        // console.log(this.tableData.length)
+        this.tableData.forEach(item=>{
+          console.log(item)
+        })
+        this.tableTitle = tableTitle
+        this.uploadLoading = false
+        this.tableLoading = false
+        this.showRemoveFile = true
+      }
+    },
+    onBeforeImgUploading(file) {
       this.imgUploadLoading = true;
+      // console.log("上传之前");
+      //  const fileExt = file.name.split('.').pop().toLocaleLowerCase()
+      //   this.uploadFile = file;
+      //   if (fileExt === 'xlsx' || fileExt === 'xls') {
+      //     this.readFile(file)
+      //     this.file = file
+      //         console.log("上传之前",file);
+      //   } else {
+      //     this.$Notice.warning({
+      //       title: '文件类型错误',
+      //       desc: '文件：' + file.name + '不是EXCEL文件，请选择后缀为.xlsx或者.xls的EXCEL文件。'
+      //     })
+      //   }
+      //   return false
+
     },
     onImgUploadInforSuccess(res) {
       console.log(res);

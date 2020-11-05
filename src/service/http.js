@@ -21,7 +21,7 @@ export const fetch = (url, params = {}) => {
 
 export const post = (url, data = {}) => {
   return new Promise((resolve, reject) => {
-    axios.post(url, qs.stringify(data, { arrayFormat: 'repeat' }))
+    axios.post(url, qs.stringify(data, { arrayFormat: 'repeat' }),{headers:{'Content-Type': 'application/json,charset=utf-8'}})
       .then(response => {
         resolve(response.data)
       })
@@ -30,6 +30,19 @@ export const post = (url, data = {}) => {
       })
   })
 }
+
+export const download = (url, data = {}) => {
+  return new Promise((resolve, reject) => {
+    axios.post(url, qs.stringify(data, { arrayFormat: 'repeat' }),{headers:{'Content-Type': 'application/json,charset=utf-8'}})
+      .then(response => {
+        resolve(response.data)
+      })
+      .catch(err => {
+        reject(err);
+      })
+  })
+}
+
 
 export const patch = (url, data = {}) => {
   return new Promise((resolve, reject) => {

@@ -7,6 +7,13 @@
                     <FormItem label="试卷标题：" prop="questionTitle">
                         <Input v-model="formValidate.questionTitle" placeholder="请输入试卷标题"></Input>
                     </FormItem>
+                    <FormItem label="起始时间：" prop="startEndTime">
+                        <DatePicker v-model="formValidate.startEndTime"  @on-change	="onDateChange"  type="datetimerange" format="yyyy-MM-dd HH:mm" placeholder="请选择考试的开始和结束时间" style="width: 300px"></DatePicker>
+                    </FormItem>
+                    <FormItem label="考试时长：" prop="testTime">
+                        <Input type="number" v-model="formValidate.testTime" placeholder="请输入考试时长（分钟）"></Input>
+                        <span>请注意时长单位为分钟 如2小时需输入 120（分钟）</span>
+                    </FormItem>
                     <FormItem label="用户分类：" prop="userType" style="width:400px">
                         <Select v-model="formValidate.userType">
                             <Option v-for="(item,i) of userType" :key="i" :value="(item.id)">
@@ -23,6 +30,20 @@
                             </Upload>
                         </span>
                         </Input>
+                    </FormItem>
+                     <FormItem   label="导入题目："  style="width:500px">
+                         <Upload
+            :action="uploadUrl"
+            :format="['xls']"
+            :data="uploadDataSubject"
+            :show-upload-list="false"
+            :before-upload="onBeforeSubUploading"
+            :on-success="onSubUploadInforSuccess"
+            :on-format-error="handleSubFormatError"
+          >
+            <Button icon="ios-cloud-upload-outline" :loading="subUploadLoading">导入题目</Button>
+            <span>{{importText}}</span>
+          </Upload>
                     </FormItem>
                     <Card>
                         <p slot="title">题目搜索</p>
@@ -112,9 +133,13 @@ import { getStore, removeStore, setStore } from "@/config/storage";
 export default {
     data() {
         return {
+            importText:"",
+             uploadUrl: `${this.host}/admin/subject/import`,
             uploadImgUrl: `${this.host}/admin/upload/oss/image`,
             imgUploadLoading: false,
+            subUploadLoading: false,
             uploadData: {},
+             uploadDataSubject: {},
             total: 0,
             page: 1,
             limit: 10,
@@ -124,13 +149,34 @@ export default {
                 userType: null,
                 allType: "",
                 subjectTitle: "",
-                imgUrl: ""
+                imgUrl: "",
+                startEndTime:[],
+                testTime:""
             },
             ruleValidate: {
                 questionTitle: [
                     {
                         required: true,
                         message: "题库标题不能为空",
+                        trigger: "blur"
+                    }
+                ],
+                startEndTime: [
+                    {
+                        required: true,
+                        message: "请选择日期",
+                        trigger: "change",
+                        type:"array",
+                        fields: {
+                         0: {type: "date", required: true, message: "请选择考试开始结束时间"},
+                         1: {type: "date", required: true, message: "请选择考试开始结束时间"}
+                        }
+                    }
+                ],
+                testTime:[
+                    {
+                        required: true,
+                        message: "考试时长不能为空",
                         trigger: "blur"
                     }
                 ],
@@ -225,7 +271,9 @@ export default {
                 questionType: "",
                 questionValue: 1,
                 answerExplain: "",
-                questionCategoryId: null
+                questionCategoryId: null,
+                startEndTime:[],
+                testTime:""
             },
             options: [
                 { optionContent: "", isTrue: "0" },
@@ -268,7 +316,8 @@ export default {
             optionList: [],
             userType: [],
             selectedArr: [],
-            selectedIds:[]
+            selectedIds:[],
+            tempArray:[]
         };
     },
     created() {
@@ -277,6 +326,11 @@ export default {
         this.getTopicTable();
     },
     methods: {
+        //选择日期
+        onDateChange(t){
+            console.log("=====",t);
+            console.log(",,,",this.formValidate.startEndTime);
+        },
         // 选择表格
         select(selection) {
             console.log(selection);
@@ -296,11 +350,13 @@ export default {
                             id: ele.id
                         });
                     });
-                    console.log(list);
+                    console.log("提交集合",list);
                     let data = {
                         testTitle: this.formValidate.questionTitle,
                         imgUrl: this.formValidate.imgUrl,
                         userType: this.formValidate.userType,
+                        startEndTime:this.formValidate.startEndTime,
+                        testTime:this.formValidate.testTime,
                         questionSubjects: list,
                         createUser:localStorage.getItem("username")
                     };
@@ -308,6 +364,7 @@ export default {
                     uploadTest({
                         ...data
                     }).then(res => {
+                        this.importText = null;
                         console.log(res);
                         if (res.code == 0) {
                             this.$refs["formValidate"].resetFields();
@@ -328,11 +385,51 @@ export default {
             this.formValidate.imgUrl = res.data || "";
         },
         handleImgFormatError(file) {
+            this.imgUploadLoading = false;
             this.$Notice.error({
                 title: "文件格式错误",
                 desc: "上传的文件格式是错误的，请选择jpg或者png格式的图片"
             });
         },
+onBeforeSubUploading(file) {
+      this.subUploadLoading = true;
+      // console.log("上传之前");
+      //  const fileExt = file.name.split('.').pop().toLocaleLowerCase()
+      //   this.uploadFile = file;
+      //   if (fileExt === 'xlsx' || fileExt === 'xls') {
+      //     this.readFile(file)
+      //     this.file = file
+      //         console.log("上传之前",file);
+      //   } else {
+      //     this.$Notice.warning({
+      //       title: '文件类型错误',
+      //       desc: '文件：' + file.name + '不是EXCEL文件，请选择后缀为.xlsx或者.xls的EXCEL文件。'
+      //     })
+      //   }
+      //   return false
+
+    },
+    onSubUploadInforSuccess(res) {
+      console.log(res);
+      this.subUploadLoading = false;
+      this.$Message.success("导入成功");
+      res.data.forEach(item=>{
+          this.tempArray.push({
+              id:item
+          })
+        
+      });
+      this.selectedArr.push(...this.tempArray);
+      this.importText = "你已导入" + res.data.length +"条题目";
+      this.getTableData();
+    },
+    handleSubFormatError(file) {
+      this.$Notice.error({
+        title: "文件格式错误",
+        desc: "上传的文件格式是错误的，请选择xls的文件"
+      });
+    },
+
         getTopicTable() {
             console.log(this.formValidate.allType);
             getTopicList({
@@ -410,7 +507,8 @@ export default {
                             isTrue = false;
                         }
                     });
-                    console.log(this.addValidate);
+                    console.log("form....." ,this.formValidate);
+                    console.log("trest 。。。",this.addValidate);
                     console.log(this.options);
                     if (isTrue) {
                         addSubject({
